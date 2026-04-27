@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4A7C59">
+  <meta name="description" content="know what's in your food. trust what you eat.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="food.me">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="apple-touch-icon" href="./assets/icons/icon-192.png">
+  <title>food.me</title>
+  <link rel="stylesheet" href="./css/main.css">
+</head>
+<body>
+
+  <!-- ── Loading overlay ─────────────────────────────────────────────── -->
+  <div id="loading-overlay" class="loading-overlay" style="display:none" role="status" aria-label="Loading">
+    <div class="loading-spinner" aria-hidden="true"></div>
+    <p class="loading-overlay__text">looking that up…</p>
+  </div>
+
+  <!-- ── Modal overlay ───────────────────────────────────────────────── -->
+  <div id="modal-overlay" class="modal-overlay" style="display:none" role="presentation"></div>
+
+  <!-- ── App shell ───────────────────────────────────────────────────── -->
+  <div id="app" class="app">
+
+    <!-- Persistent wordmark (hidden on scan screen) -->
+    <header class="app-header" id="app-header">
+      <span class="wordmark" aria-label="food.me">food.me</span>
+    </header>
+
+    <!-- ── Onboarding screen ────────────────────────────────────────── -->
+    <div id="screen-onboarding" class="screen screen--onboarding">
+      <div id="onboarding-content" class="onboarding-content"></div>
+    </div>
+
+    <!-- ── Scan screen ──────────────────────────────────────────────── -->
+    <div id="screen-scan" class="screen">
+      <div class="scanner-wrap">
+        <video id="scanner-video" class="scanner-video" autoplay muted playsinline aria-label="Camera viewfinder"></video>
+        <div class="scanner-reticle" aria-hidden="true">
+          <div class="scanner-reticle__corner scanner-reticle__corner--tl"></div>
+          <div class="scanner-reticle__corner scanner-reticle__corner--tr"></div>
+          <div class="scanner-reticle__corner scanner-reticle__corner--bl"></div>
+          <div class="scanner-reticle__corner scanner-reticle__corner--br"></div>
+          <div class="scanner-reticle__line" aria-hidden="true"></div>
+        </div>
+        <p id="scanner-camera-message" class="scanner-camera-message" style="display:none" role="alert"></p>
+        <button id="torch-btn" class="torch-btn" aria-label="Toggle torch" aria-pressed="false" style="display:none">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4"/>
+            <circle cx="12" cy="12" r="5"/>
+          </svg>
+        </button>
+      </div>
+      <div class="manual-entry-section">
+        <p class="manual-entry-label">or enter barcode manually</p>
+        <div class="manual-entry-row">
+          <input type="text" id="manual-barcode-input" class="text-input text-input--barcode"
+            placeholder="barcode number"
+            inputmode="tel"
+            pattern="[0-9]*"
+            autocomplete="off"
+            aria-label="Manual barcode entry">
+          <button id="manual-barcode-submit" class="btn btn--primary btn--compact" aria-label="Look up barcode">go</button>
+        </div>
+      </div>
+      <!-- Debug inject section (shown only in debug mode) -->
+      <div id="debug-scan-section" class="debug-scan-section" style="display:none">
+        <p class="debug-label">inject test barcode</p>
+        <div class="manual-entry-row">
+          <select id="debug-inject-barcode" class="text-input text-input--select" aria-label="Test barcode">
+            <option value="5000169105306">5000169105306 — Hobnobs</option>
+            <option value="7622210449283">7622210449283 — Oreos</option>
+            <option value="0000000000000">0000000000000 — force not-found</option>
+          </select>
+          <button id="debug-inject-btn" class="btn btn--outline btn--compact">inject</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Result screen ────────────────────────────────────────────── -->
+    <div id="screen-result" class="screen screen--result">
+      <div id="result-content" class="result-content"></div>
+    </div>
+
+    <!-- ── History screen ───────────────────────────────────────────── -->
+    <div id="screen-history" class="screen">
+      <div class="screen-header">
+        <h1 class="screen-title">history</h1>
+      </div>
+      <div id="history-list" class="list-container"></div>
+    </div>
+
+    <!-- ── Safe Foods screen ─────────────────────────────────────────── -->
+    <div id="screen-safe" class="screen">
+      <div class="screen-header">
+        <h1 class="screen-title">safe foods</h1>
+      </div>
+      <div id="safe-list" class="list-container"></div>
+    </div>
+
+    <!-- ── Settings screen ──────────────────────────────────────────── -->
+    <div id="screen-settings" class="screen">
+      <div class="screen-header">
+        <h1 class="screen-title">settings</h1>
+      </div>
+      <div id="settings-content" class="settings-content"></div>
+    </div>
+
+  </div><!-- /app -->
+
+  <!-- ── Debug bar ────────────────────────────────────────────────────── -->
+  <div id="debug-bar" class="debug-bar" style="display:none" aria-hidden="true"></div>
+
+  <!-- ── Bottom navigation ────────────────────────────────────────────── -->
+  <nav class="bottom-nav" role="navigation" aria-label="Main navigation">
+    <button class="nav-item" data-screen="screen-scan" aria-label="Scan">
+      <span class="nav-item__icon" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="5" height="5" rx="1"/>
+          <rect x="16" y="3" width="5" height="5" rx="1"/>
+          <rect x="3" y="16" width="5" height="5" rx="1"/>
+          <path d="M16 16h5M16 21h5M21 16v5M16 16v2"/>
+          <path d="M9 3v18M3 9h6M15 3v6M3 15h6"/>
+        </svg>
+      </span>
+      <span class="nav-item__label">scan</span>
+    </button>
+    <button class="nav-item" data-screen="screen-history" aria-label="History">
+      <span class="nav-item__icon" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="9"/>
+          <polyline points="12 7 12 12 15 15"/>
+        </svg>
+      </span>
+      <span class="nav-item__label">history</span>
+    </button>
+    <button class="nav-item" data-screen="screen-safe" aria-label="Safe foods">
+      <span class="nav-item__icon" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <polyline points="9 12 11 14 15 10"/>
+        </svg>
+      </span>
+      <span class="nav-item__label">safe foods</span>
+    </button>
+    <button class="nav-item" data-screen="screen-settings" aria-label="Settings">
+      <span class="nav-item__icon" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </span>
+      <span class="nav-item__label">settings</span>
+    </button>
+  </nav>
+
+  <!-- ── Scripts ──────────────────────────────────────────────────────── -->
+  <!-- Debugger loads first so it intercepts console calls from all other scripts -->
+  <script src="./js/debugger.js"></script>
+
+  <!-- CDN dependencies -->
+  <script src="https://unpkg.com/dexie@3/dist/dexie.js"></script>
+  <script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+
+  <!-- App modules (order matters) -->
+  <script src="./js/sensitivity-dictionary.js"></script>
+  <script src="./js/db.js"></script>
+  <script src="./js/allergens.js"></script>
+  <script src="./js/api.js"></script>
+  <script src="./js/scanner.js"></script>
+  <script>
+    // Instrument scanner after it's loaded — wraps startScanner/stopScanner
+    // to emit named debug events. Only active when debugger is enabled.
+    if (typeof _scannerInstrument === 'function') _scannerInstrument();
+  </script>
+  <script src="./js/ui.js"></script>
+  <script src="./js/app.js"></script>
+
+</body>
+</html>

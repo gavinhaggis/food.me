@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>food.me — test suite</title>
+  <style>
+    :root {
+      --pass:   #4A7C59;
+      --fail:   #B84C4C;
+      --note:   #C97B2A;
+      --bg:     #FAFAF8;
+      --surface: #FFFFFF;
+      --border: #E8E8E4;
+      --text:   #1A1A1A;
+      --muted:  #6B6B6B;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 24px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .wordmark {
+      font-size: 28px;
+      font-weight: 300;
+      letter-spacing: 0.05em;
+      color: var(--pass);
+    }
+
+    .run-btn {
+      background: var(--pass);
+      color: white;
+      border: none;
+      padding: 10px 24px;
+      border-radius: 999px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .run-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .summary-bar {
+      padding: 12px 24px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      font-size: 14px;
+    }
+
+    .stat { font-weight: 600; }
+    .stat--pass { color: var(--pass); }
+    .stat--fail { color: var(--fail); }
+    .stat--note { color: var(--note); }
+
+    .progress-bar-wrap {
+      flex: 1;
+      height: 6px;
+      background: var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--pass);
+      border-radius: 999px;
+      width: 0%;
+      transition: width 0.15s ease;
+    }
+
+    .progress-bar--fail { background: var(--fail); }
+
+    main {
+      padding: 24px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .known-issues {
+      background: rgba(201, 123, 42, 0.08);
+      border: 1px solid rgba(201, 123, 42, 0.3);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 28px;
+    }
+
+    .known-issues h2 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--note);
+      margin-bottom: 10px;
+    }
+
+    .known-issues ul {
+      padding-left: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .known-issues li {
+      font-size: 14px;
+      color: var(--text);
+    }
+
+    .known-issues code {
+      background: rgba(0,0,0,0.06);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    .suite {
+      margin-bottom: 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .suite-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+      user-select: none;
+      background: var(--surface);
+    }
+
+    .suite-header:hover { background: var(--bg); }
+
+    .suite-title {
+      font-weight: 600;
+      font-size: 14px;
+      flex: 1;
+    }
+
+    .suite-counts {
+      font-size: 13px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .suite-chevron {
+      font-size: 12px;
+      color: var(--muted);
+      transition: transform 0.15s;
+    }
+
+    .suite--collapsed .suite-chevron { transform: rotate(-90deg); }
+    .suite--collapsed .test-list { display: none; }
+
+    .test-list {
+      border-top: 1px solid var(--border);
+    }
+
+    .test-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    .test-row:last-child { border-bottom: none; }
+
+    .test-icon {
+      flex-shrink: 0;
+      font-size: 13px;
+      margin-top: 2px;
+      font-style: normal;
+    }
+
+    .test-label { flex: 1; }
+
+    .test-label--fail { color: var(--text); }
+
+    .test-error {
+      font-size: 12px;
+      color: var(--fail);
+      background: rgba(184, 76, 76, 0.06);
+      border-left: 2px solid var(--fail);
+      padding: 6px 10px;
+      margin-top: 6px;
+      border-radius: 0 4px 4px 0;
+      white-space: pre-wrap;
+      font-family: monospace;
+    }
+
+    .test-error--note {
+      color: var(--note);
+      background: rgba(201, 123, 42, 0.06);
+      border-left-color: var(--note);
+    }
+
+    .test-ms {
+      font-size: 12px;
+      color: var(--muted);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .idle-state {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--muted);
+    }
+
+    .idle-state p:first-child { font-size: 32px; margin-bottom: 8px; }
+
+    footer {
+      text-align: center;
+      padding: 32px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <span class="wordmark">food.me</span>
+  <div style="flex:1">
+    <div style="font-size:13px;color:var(--muted)">functional test suite</div>
+  </div>
+  <button class="run-btn" id="run-btn">run all tests</button>
+</header>
+
+<div class="summary-bar" id="summary-bar">
+  <span class="stat stat--pass" id="stat-pass">— passing</span>
+  <span class="stat stat--fail" id="stat-fail">— failing</span>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar" id="progress-bar"></div>
+  </div>
+</div>
+
+<main>
+
+  <!-- Known bugs & friction points found during code review -->
+  <div class="known-issues">
+    <h2>bugs &amp; friction identified by code review</h2>
+    <ul>
+      <li>
+        <strong>Bug — getSafeProducts wrong sort order:</strong>
+        <code>Dexie .filter().reverse().sortBy()</code> — <code>.reverse()</code> is silently ignored when followed by <code>.sortBy()</code>. Safe foods appear oldest-first. Fix: collect with <code>.toArray()</code> then sort manually.
+      </li>
+      <li>
+        <strong>Bug — duplicate event listeners on scan re-entry:</strong>
+        Every call to <code>startScanScreen()</code> stacks a new <code>click</code> and <code>keydown</code> listener onto the manual barcode input and torch button. After 3 navigations, one Enter keypress fires 3 API calls.
+      </li>
+      <li>
+        <strong>Friction — square bracket content not stripped by normaliseIngredient:</strong>
+        <code>normaliseIngredient</code> only strips round parentheses <code>()</code>. Labels using <code>[E306, E307]</code> style pass through unnormalised. Low severity — not a matching blocker but produces messy ingredient display.
+      </li>
+      <li>
+        <strong>Friction — history list shows barcode then flickers to product name:</strong>
+        Product names are resolved async after render. On slow devices this is visible. Fix: resolve names before rendering or show a skeleton.
+      </li>
+      <li>
+        <strong>Friction — fuzzy search requires 2+ chars:</strong>
+        Single-character queries (e.g. typing "e" toward "egg") return nothing. Consider reducing threshold to 1 for dictionary key/displayName exact-prefix matches.
+      </li>
+      <li>
+        <strong>Friction — manual barcode "go" button on mobile:</strong>
+        <code>inputmode="numeric"</code> hides the Enter key on some Android keyboards. The "go" button is present but small. Consider <code>inputmode="tel"</code> which shows a numeric pad with a clearer action key.
+      </li>
+    </ul>
+  </div>
+
+  <div id="results-container">
+    <div class="idle-state">
+      <p>🧪</p>
+      <p>press "run all tests" to execute the full suite</p>
+    </div>
+  </div>
+
+</main>
+
+<footer>food.me test suite · no frameworks · runs in browser</footer>
+
+<!-- ── Load app dependencies ─────────────────────────────────────────────── -->
+<script src="https://unpkg.com/dexie@3/dist/dexie.js"></script>
+
+<!-- Stub ZXing so app scripts load without errors in test context -->
+<script>
+  window.ZXing = {
+    BrowserMultiFormatReader: function() {
+      return {
+        listVideoInputDevices: async () => [],
+        decodeFromConstraints: async () => {},
+        decodeFromStream: async () => {},
+        decodeFromVideoDevice: async () => {},
+        reset: () => {}
+      };
+    },
+    NotFoundException: class NotFoundException extends Error {}
+  };
+</script>
+
+<!-- App modules -->
+<script src="./js/sensitivity-dictionary.js"></script>
+<script src="./js/db.js"></script>
+<script src="./js/allergens.js"></script>
+<script src="./js/api.js"></script>
+<script src="./js/scanner.js"></script>
+
+<!-- Stub minimal UI functions needed by tests -->
+<script>
+  // Tests reference escapeHtml and humanDate from ui.js.
+  // Rather than load all of ui.js (which touches DOM), inline the pure functions.
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function humanDate(timestamp) {
+    if (!timestamp) return 'unknown date';
+    const now = Date.now();
+    const diff = now - timestamp;
+    const day = 86400000;
+    if (diff < day) return 'today';
+    if (diff < 2 * day) return 'yesterday';
+    if (diff < 7 * day) return `${Math.floor(diff / day)} days ago`;
+    if (diff < 30 * day) return `${Math.floor(diff / (7 * day))} weeks ago`;
+    return new Date(timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  // Stub APP_STATE for any indirect references
+  window.APP_STATE = { debugMode: false };
+</script>
+
+<!-- Test framework + tests -->
+<script src="./js/test-runner.js"></script>
+<script src="./js/tests.js"></script>
+
+<!-- ── Runner UI ─────────────────────────────────────────────────────────── -->
+<script>
+  const runBtn    = document.getElementById('run-btn');
+  const container = document.getElementById('results-container');
+  const statPass  = document.getElementById('stat-pass');
+  const statFail  = document.getElementById('stat-fail');
+  const progressBar = document.getElementById('progress-bar');
+
+  let totalTests = 0;
+  let completedTests = 0;
+
+  // Count total tests for progress
+  // (can't easily pre-count without duplicating registration logic, so we compute on first run)
+
+  runBtn.addEventListener('click', async () => {
+    runBtn.disabled = true;
+    runBtn.textContent = 'running…';
+    container.innerHTML = '';
+    completedTests = 0;
+    progressBar.style.width = '0%';
+    progressBar.classList.remove('progress-bar--fail');
+
+    let passTotal = 0;
+    let failTotal = 0;
+
+    const results = await runTests(() => {
+      completedTests++;
+      if (totalTests > 0) {
+        progressBar.style.width = `${(completedTests / totalTests) * 100}%`;
+      }
+    });
+
+    // Count total tests from results for progress calculation
+    totalTests = results.reduce((s, suite) => s + suite.tests.length, 0);
+    progressBar.style.width = '100%';
+
+    for (const suite of results) {
+      passTotal += suite.pass;
+      failTotal += suite.fail;
+
+      const suiteEl = document.createElement('div');
+      suiteEl.className = 'suite';
+
+      const headerEl = document.createElement('div');
+      headerEl.className = 'suite-header';
+      headerEl.innerHTML = `
+        <span class="suite-title">${escHtml(suite.label)}</span>
+        <span class="suite-counts">
+          ${suite.pass > 0 ? `<span style="color:var(--pass)">✓ ${suite.pass}</span>` : ''}
+          ${suite.fail > 0 ? `<span style="color:var(--fail)">✗ ${suite.fail}</span>` : ''}
+        </span>
+        <span class="suite-chevron">▾</span>
+      `;
+
+      const listEl = document.createElement('div');
+      listEl.className = 'test-list';
+
+      for (const test of suite.tests) {
+        const row = document.createElement('div');
+        row.className = 'test-row';
+
+        const isBug = test.label.startsWith('BUG') || test.label.startsWith('NOTE');
+        const icon = test.status === 'pass' ? '✓' : '✗';
+        const iconColor = test.status === 'pass' ? 'var(--pass)' : 'var(--fail)';
+
+        let errorHtml = '';
+        if (test.status === 'fail') {
+          const isBugNote = test.error && (test.error.includes('BUG CONFIRMED') || test.error.includes('BUG') || test.label.startsWith('BUG'));
+          errorHtml = `<div class="test-error ${isBugNote ? 'test-error--note' : ''}">${escHtml(test.error)}</div>`;
+        }
+
+        row.innerHTML = `
+          <span class="test-icon" style="color:${iconColor}">${icon}</span>
+          <div class="test-label" style="flex:1">
+            <div>${escHtml(test.label)}</div>
+            ${errorHtml}
+          </div>
+          <span class="test-ms">${test.ms}ms</span>
+        `;
+
+        listEl.appendChild(row);
+      }
+
+      suiteEl.appendChild(headerEl);
+      suiteEl.appendChild(listEl);
+      container.appendChild(suiteEl);
+
+      // Collapse passing suites by default; keep failing suites open
+      if (suite.fail === 0) {
+        suiteEl.classList.add('suite--collapsed');
+      }
+
+      headerEl.addEventListener('click', () => {
+        suiteEl.classList.toggle('suite--collapsed');
+        headerEl.querySelector('.suite-chevron').textContent =
+          suiteEl.classList.contains('suite--collapsed') ? '▾' : '▴';
+      });
+    }
+
+    statPass.textContent = `${passTotal} passing`;
+    statFail.textContent = `${failTotal} failing`;
+    if (failTotal > 0) progressBar.classList.add('progress-bar--fail');
+
+    runBtn.disabled = false;
+    runBtn.textContent = 'run again';
+  });
+
+  function escHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+</script>
+
+</body>
+</html>
