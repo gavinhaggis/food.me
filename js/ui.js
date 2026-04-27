@@ -622,13 +622,13 @@ function handleScannerError(errorType) {
       permission_denied: {
         icon: '📷',
         heading: 'camera access was denied',
-        sub: 'to re-enable the camera, tap the lock icon in your browser's address bar and allow camera access, then reload the page.',
+        sub: "to re-enable the camera, tap the lock icon in your browser's address bar and allow camera access, then reload the page.",
         hint: null
       },
       no_camera: {
         icon: '📷',
         heading: 'no camera found',
-        sub: 'this device doesn't appear to have a camera available. type a barcode below to look up a product.',
+        sub: "this device doesn't appear to have a camera available. type a barcode below to look up a product.",
         hint: null
       },
       unknown: {
