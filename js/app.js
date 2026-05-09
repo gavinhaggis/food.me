@@ -8,7 +8,8 @@ window.APP_STATE = {
   lastApiResult: null,
   lastVerdictResult: null,
   currentProductId: null,
-  currentScanCount: 1
+  currentScanCount: 1,
+  resultSource: null
 };
 
 // ── Initialise ────────────────────────────────────────────────────────────

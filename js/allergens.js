@@ -6,9 +6,12 @@ function normaliseIngredient(raw) {
   if (!raw || typeof raw !== 'string') return '';
 
   let s = raw.toLowerCase();
-  // Strip content in parentheses (recursively)
+  // Strip content in parentheses and square brackets (recursively)
   while (/\([^()]*\)/.test(s)) {
     s = s.replace(/\([^()]*\)/g, '');
+  }
+  while (/\[[^\[\]]*\]/.test(s)) {
+    s = s.replace(/\[[^\[\]]*\]/g, '');
   }
   // Strip percentage values
   s = s.replace(/\d+\.?\d*\s*%/g, '');
@@ -140,10 +143,8 @@ async function calculateVerdict(product, userProfile) {
       const kw = keyword.toLowerCase().trim();
       if (!kw) continue;
 
-      // Check normalised ingredients array
-      const ingredientMatch = ingredients.find(ing =>
-        ing.includes(kw) || kw.includes(ing) && ing.length > 3
-      );
+      // Check normalised ingredients array (one-directional: ingredient must contain the keyword)
+      const ingredientMatch = ingredients.find(ing => ing.includes(kw));
 
       // Also check raw text
       const rawMatch = !ingredientMatch && rawText.includes(kw);

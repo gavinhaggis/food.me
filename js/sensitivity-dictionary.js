@@ -11,7 +11,7 @@ const SENSITIVITY_DICTIONARY = {
       'lactoglobulin', 'ghee', 'butter', 'cream', 'cheese', 'yogurt',
       'yoghurt', 'kefir', 'quark', 'paneer', 'fromage', 'curd',
       'skimmed milk', 'whole milk', 'milk powder', 'milk solids',
-      'milk fat', 'lac', 'lacto', 'E270', 'E325', 'E326', 'E327',
+      'milk fat', 'lactic', 'lacto', 'E270', 'E325', 'E326', 'E327',
       'rennet', 'custard', 'ganache', 'nougat', 'lactis', 'lactalbumin',
       'lactulose', 'lacto', 'milch', 'lait', 'leche', 'buttermilk',
       'condensed milk', 'evaporated milk', 'milk protein', 'calcium caseinate',
@@ -26,8 +26,8 @@ const SENSITIVITY_DICTIONARY = {
     emoji: '🥚',
     tier: 'eu14',
     keywords: [
-      'egg', 'eggs', 'albumin', 'ovalbumin', 'ovomucin', 'lysozyme',
-      'mayonnaise', 'mayo', 'meringue', 'lecithin', 'egg white', 'egg yolk',
+      'egg', 'eggs', 'ovalbumin', 'egg albumin', 'ovomucin', 'lysozyme',
+      'mayonnaise', 'mayo', 'meringue', 'egg white', 'egg yolk',
       'egg powder', 'dried egg', 'egg solids', 'globulin', 'livetin',
       'E1105', 'ovum', 'egg white powder', 'whole egg powder',
       'egg lecithin', 'egg white lysozyme', 'dried whole egg',
@@ -40,16 +40,16 @@ const SENSITIVITY_DICTIONARY = {
     emoji: '🌾',
     tier: 'eu14',
     keywords: [
-      'wheat', 'gluten', 'flour', 'semolina', 'spelt', 'kamut', 'durum',
+      'wheat', 'gluten', 'semolina', 'spelt', 'kamut', 'durum',
       'farro', 'einkorn', 'triticale', 'fu', 'seitan', 'wheat starch',
       'wheat germ', 'wheat bran', 'breadcrumbs', 'rusk', 'bulgur',
       'couscous', 'wheat protein', 'hydrolysed wheat', 'wheat flour',
       'bread flour', 'plain flour', 'self-raising flour', 'strong flour',
-      'wholemeal flour', 'white flour', 'pasta', 'noodles', 'rye',
+      'wholemeal flour', 'white flour', 'wheat pasta', 'wheat noodles', 'rye',
       'barley', 'oats', 'malt', 'malted', 'wheat extract',
       'modified wheat starch', 'vital wheat gluten', 'wheat fibre',
-      'biscuit', 'cracker', 'crouton', 'bread', 'roll', 'bun',
-      'cake', 'pastry', 'wheat maltodextrin'
+      'wheat cracker', 'crouton', 'wheat bread', 'wheat roll', 'wheat bun',
+      'wheat cake', 'wheat pastry', 'wheat maltodextrin'
     ]
   },
   peanuts: {
@@ -128,12 +128,21 @@ const SENSITIVITY_DICTIONARY = {
     keywords: [
       'soy', 'soya', 'soybean', 'soybeans', 'tofu', 'miso', 'tempeh',
       'edamame', 'soy sauce', 'tamari', 'textured vegetable protein',
-      'TVP', 'soy lecithin', 'soya lecithin', 'soy milk', 'soya milk',
+      'TVP', 'soy milk', 'soya milk',
       'soy protein', 'soya protein', 'hydrolysed soy protein',
       'hydrolysed soya protein', 'soy flour', 'soya flour',
       'soy oil', 'soya oil', 'soybean oil', 'soy extract', 'soya extract',
       'soy concentrate', 'soy isolate', 'natto', 'okara', 'doenjang',
       'gochujang', 'hoisin', 'shoyu', 'soja', 'sojabohne'
+    ]
+  },
+  soy_lecithin: {
+    displayName: 'Soy Lecithin',
+    emoji: '🫘',
+    tier: 'eu14',
+    keywords: [
+      'soy lecithin', 'soya lecithin', 'sunflower lecithin',
+      'lecithin (soy)', 'lecithin (soya)', 'E322'
     ]
   },
   celery: {
@@ -201,7 +210,7 @@ const SENSITIVITY_DICTIONARY = {
     keywords: [
       'apple', 'malus domestica', 'apple juice', 'apple cider',
       'cider vinegar', 'apple extract', 'apple powder', 'applesauce',
-      'dried apple', 'apple concentrate', 'malic acid', 'E296',
+      'dried apple', 'apple concentrate',
       'apple flavour', 'apple flavoring', 'apple pieces', 'diced apple',
       'apple puree', 'apple peel', 'toffee apple', 'pomme'
     ]
@@ -211,8 +220,8 @@ const SENSITIVITY_DICTIONARY = {
     emoji: '🍋',
     tier: 'custom',
     keywords: [
-      'orange', 'lemon', 'lime', 'grapefruit', 'citrus', 'citric acid',
-      'E330', 'limonene', 'orange peel', 'lemon juice', 'orange juice',
+      'orange', 'lemon', 'lime', 'grapefruit', 'citrus', 'limonene',
+      'orange peel', 'lemon juice', 'orange juice',
       'citrus extract', 'bergamot', 'mandarin', 'clementine', 'tangerine',
       'yuzu', 'citrus oil', 'lemon zest', 'orange zest', 'lemon peel',
       'lime juice', 'grapefruit juice', 'lemon oil', 'orange oil',
@@ -242,8 +251,8 @@ const SENSITIVITY_DICTIONARY = {
     keywords: [
       'potato', 'potatoes', 'potato starch', 'potato flour', 'potato protein',
       'potato extract', 'potato flakes', 'potato powder', 'potato granules',
-      'potato chips', 'crisps', 'mashed potato', 'modified starch',
-      'starch', 'solanum tuberosum', 'dehydrated potato', 'instant potato',
+      'potato chips', 'potato crisps', 'mashed potato',
+      'solanum tuberosum', 'dehydrated potato', 'instant potato',
       'potato peel', 'potato fibre', 'kartoffel', 'patata'
     ]
   },
@@ -252,7 +261,7 @@ const SENSITIVITY_DICTIONARY = {
     emoji: '🌶️',
     tier: 'custom',
     keywords: [
-      'pepper', 'peppers', 'bell pepper', 'capsicum', 'chilli', 'chili',
+      'bell pepper', 'capsicum', 'chilli', 'chili',
       'paprika', 'cayenne', 'jalapeño', 'jalapeno', 'habanero', 'capsaicin',
       'E160c', 'chilli powder', 'chili powder', 'red pepper', 'green pepper',
       'yellow pepper', 'hot sauce', 'tabasco', 'sriracha', 'chipotle',
@@ -475,7 +484,7 @@ const SENSITIVITY_DICTIONARY = {
       'caffeine', 'coffee', 'espresso', 'guarana', 'matcha', 'green tea',
       'black tea', 'yerba mate', 'cola nut', 'kola nut', 'tea extract',
       'coffee extract', 'coffee flavour', 'coffee beans', 'instant coffee',
-      'decaf', 'decaffeinated', 'café', 'caffè', 'koffein',
+      'café', 'caffè', 'koffein',
       'coffeina', 'theine', 'theophylline', 'theobromine',
       'chocolate', 'dark chocolate', 'milk chocolate', 'cocoa',
       'cacao', 'energy drink'
@@ -486,8 +495,8 @@ const SENSITIVITY_DICTIONARY = {
     emoji: '🍷',
     tier: 'custom',
     keywords: [
-      'alcohol', 'ethanol', 'wine', 'beer', 'spirits', 'fermented',
-      'malt', 'ale', 'lager', 'cider', 'whisky', 'whiskey', 'vodka',
+      'alcohol', 'ethanol', 'wine', 'beer', 'spirits',
+      'ale', 'lager', 'cider', 'whisky', 'whiskey', 'vodka',
       'rum', 'gin', 'brandy', 'champagne', 'prosecco', 'sherry',
       'port', 'sake', 'mead', 'stout', 'porter', 'liqueur',
       'wine vinegar', 'red wine vinegar', 'white wine vinegar',

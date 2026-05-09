@@ -55,8 +55,10 @@ async function saveProduct(productData) {
 
     let productId;
     if (existing) {
+      // Never overwrite safe-marking fields — the user set these deliberately
+      const { markedSafe: _ms, userOverride: _uo, overrideNote: _on, markedSafeAt: _msa, ...updateableData } = productData;
       await db.products.update(existing.id, {
-        ...productData,
+        ...updateableData,
         scanCount: (existing.scanCount || 0) + 1,
         scannedAt: Date.now()
       });
@@ -189,6 +191,22 @@ async function markProductSafe(productId, override = false, overrideNote = '') {
     return true;
   } catch (e) {
     console.error('[foodme:db] markProductSafe failed', e);
+    return false;
+  }
+}
+
+async function unmarkProductSafe(productId) {
+  try {
+    await db.products.update(productId, {
+      markedSafe: false,
+      markedSafeAt: null,
+      userOverride: false,
+      overrideNote: ''
+    });
+    console.log('[foodme:db] product ' + productId + ' unmarked safe');
+    return true;
+  } catch (e) {
+    console.error('[foodme:db] unmarkProductSafe failed', e);
     return false;
   }
 }

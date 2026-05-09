@@ -15,6 +15,12 @@ function humanDate(timestamp) {
   return new Date(timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+const CONFIDENCE_LABELS = {
+  definite:  'always',
+  likely:    'usually',
+  suspected: 'sometimes'
+};
+
 // ── Verdict UI helpers ────────────────────────────────────────────────────
 
 const VERDICT_CONFIG = {
@@ -128,6 +134,7 @@ function renderOnboardingAllergens(container) {
   container.innerHTML = `
     <div class="onboarding-section">
       <div class="onboarding-progress">step 1 of 5</div>
+      <button class="btn btn--text ob-back-btn" style="padding:0;margin-bottom:var(--space-2)">← back</button>
       <h2 class="onboarding-heading">what affects you?</h2>
       <p class="onboarding-sub">tap everything that doesn't agree with you</p>
       <div class="allergen-grid" id="allergen-grid"></div>
@@ -167,6 +174,11 @@ function renderOnboardingAllergens(container) {
     grid.appendChild(card);
   }
 
+  container.querySelector('.ob-back-btn').addEventListener('click', () => {
+    onboardingState.step = 1;
+    renderOnboardingStep(1);
+  });
+
   document.getElementById('ob-none').addEventListener('click', () => {
     onboardingState.selectedAllergens = [];
     onboardingState.step = 4;
@@ -204,6 +216,7 @@ function renderOnboardingConfidence(container) {
   container.innerHTML = `
     <div class="onboarding-section">
       <div class="onboarding-progress">step 2 of 5 — ${current} of ${total}</div>
+      <button class="btn btn--text ob-back-btn" style="padding:0;margin-bottom:var(--space-2)">← back</button>
       <div class="confidence-emoji">${entry.emoji}</div>
       <h2 class="onboarding-heading">how much does<br><em>${entry.displayName}</em> affect you?</h2>
       <div class="confidence-options" role="radiogroup" aria-label="Confidence level">
@@ -221,6 +234,16 @@ function renderOnboardingConfidence(container) {
       </button>
     </div>
   `;
+
+  container.querySelector('.ob-back-btn').addEventListener('click', () => {
+    if (idx === 0) {
+      onboardingState.step = 2;
+      renderOnboardingStep(2);
+    } else {
+      onboardingState._confidenceIndex = idx - 1;
+      renderOnboardingConfidence(container);
+    }
+  });
 
   let selected_confidence = currentConfidence;
 
@@ -248,6 +271,7 @@ function renderOnboardingCustom(container) {
   container.innerHTML = `
     <div class="onboarding-section">
       <div class="onboarding-progress">step 3 of 5</div>
+      <button class="btn btn--text ob-back-btn" style="padding:0;margin-bottom:var(--space-2)">← back</button>
       <h2 class="onboarding-heading">anything else?</h2>
       <p class="onboarding-sub">in plain language — apples, onions, anything at all</p>
       <div class="search-input-wrap">
@@ -260,6 +284,12 @@ function renderOnboardingCustom(container) {
   `;
 
   renderCustomList();
+
+  container.querySelector('.ob-back-btn').addEventListener('click', () => {
+    onboardingState.step = onboardingState.selectedAllergens.length > 0 ? 3 : 2;
+    onboardingState._confidenceIndex = onboardingState.selectedAllergens.length - 1;
+    renderOnboardingStep(onboardingState.step);
+  });
 
   const input = document.getElementById('ob-custom-input');
   input.addEventListener('input', () => {
@@ -374,12 +404,18 @@ function renderOnboardingGroups(container) {
   container.innerHTML = `
     <div class="onboarding-section">
       <div class="onboarding-progress">step 4 of 5</div>
+      <button class="btn btn--text ob-back-btn" style="padding:0;margin-bottom:var(--space-2)">← back</button>
       <h2 class="onboarding-heading">we noticed a pattern</h2>
       <p class="onboarding-sub">based on your selections, these food groups might be relevant</p>
       <div id="ob-group-cards"></div>
       <button class="btn btn--primary btn--block mt-5" id="ob-next-5">looks good</button>
     </div>
   `;
+
+  container.querySelector('.ob-back-btn').addEventListener('click', () => {
+    onboardingState.step = 4;
+    renderOnboardingStep(4);
+  });
 
   const cardsContainer = document.getElementById('ob-group-cards');
 
@@ -391,7 +427,7 @@ function renderOnboardingGroups(container) {
         <span class="group-suggestion-card__emoji" aria-hidden="true">${group.emoji}</span>
         <div>
           <div class="group-suggestion-card__title">${group.displayName}</div>
-          <div class="group-suggestion-card__matched">matched: ${matchedKeys.join(', ')}</div>
+          <div class="group-suggestion-card__matched">matched: ${matchedKeys.map(k => SENSITIVITY_DICTIONARY[k] ? SENSITIVITY_DICTIONARY[k].displayName : k).join(', ')}</div>
         </div>
         <button class="group-suggestion-card__dismiss" aria-label="Dismiss ${group.displayName}">×</button>
       </div>
@@ -573,6 +609,7 @@ function startScanScreen() {
 
 async function handleBarcodeScanned(barcode) {
   window.APP_STATE.lastBarcode = barcode;
+  window.APP_STATE.resultSource = null;
   updateDebugBar();
 
   stopScanner();
@@ -677,7 +714,7 @@ function handleScannerError(errorType) {
 
 // ── Result screen ─────────────────────────────────────────────────────────
 
-async function showResultScreen(barcode, apiResult) {
+async function showResultScreen(barcode, apiResult, viewOnly = false) {
   showScreen('screen-result');
 
   const profile = window.APP_STATE.profile;
@@ -689,7 +726,6 @@ async function showResultScreen(barcode, apiResult) {
     return;
   }
 
-  // Save product to DB
   const productData = {
     barcode,
     name: apiResult.name,
@@ -703,8 +739,19 @@ async function showResultScreen(barcode, apiResult) {
     overrideNote: ''
   };
 
-  const productId = await saveProduct(productData);
+  // On real scans save to DB; on history/safe-foods view just look up the existing record
+  let productId;
+  if (viewOnly) {
+    const existing = await getProductByBarcode(barcode);
+    productId = existing ? existing.id : null;
+  } else {
+    productId = await saveProduct(productData);
+  }
   window.APP_STATE.currentProductId = productId;
+
+  // Scan count comes from the persisted record
+  const persistedProduct = productId ? await getProductById(productId) : null;
+  window.APP_STATE.currentScanCount = persistedProduct ? persistedProduct.scanCount : 1;
 
   // Calculate verdict
   const verdictResult = await calculateVerdict(
@@ -714,8 +761,8 @@ async function showResultScreen(barcode, apiResult) {
   window.APP_STATE.lastVerdictResult = verdictResult;
   updateDebugBar();
 
-  // Save scan history
-  if (productId) {
+  // Save scan history on real scans only
+  if (!viewOnly && productId) {
     await saveScanHistory({
       barcode,
       productId,
@@ -726,11 +773,32 @@ async function showResultScreen(barcode, apiResult) {
     });
   }
 
-  renderResultContent(container, apiResult, verdictResult, productId);
+  renderResultContent(container, apiResult, verdictResult, productId, persistedProduct);
 }
 
-function renderResultContent(container, apiResult, verdictResult, productId) {
+function wireUnmarkButton(btn, productId) {
+  btn.addEventListener('click', () => {
+    showConfirmModal(
+      'remove this from your safe foods list?',
+      'yes, remove',
+      'keep it',
+      async () => {
+        await unmarkProductSafe(productId);
+        showToast('removed from safe foods');
+        btn.remove();
+        const markBtn = document.getElementById('mark-safe-btn');
+        if (markBtn) { markBtn.textContent = 'mark as safe'; markBtn.disabled = false; }
+      }
+    );
+  });
+}
+
+function renderResultContent(container, apiResult, verdictResult, productId, persistedProduct) {
   const vc = VERDICT_CONFIG[verdictResult.verdict];
+  const source = window.APP_STATE.resultSource;
+  const backHtml = source
+    ? `<button class="btn btn--text result-back-btn" id="result-back-btn">← ${source === 'screen-history' ? 'history' : 'safe foods'}</button>`
+    : '';
 
   const imageHtml = apiResult.imageUrl
     ? `<div class="result-image-wrap"><img src="${escapeHtml(apiResult.imageUrl)}" alt="${escapeHtml(apiResult.name)}" class="result-image" loading="lazy"></div>`
@@ -743,7 +811,7 @@ function renderResultContent(container, apiResult, verdictResult, productId) {
           <div class="flagged-item">
             <span class="flagged-item__name">${escapeHtml(f.sensitivity.emoji || '')} ${escapeHtml(f.sensitivity.displayName)}</span>
             <span class="flagged-item__type">${f.matchType === 'structured' ? 'listed allergen' : 'found in ingredients'}</span>
-            <span class="flagged-item__confidence confidence--${f.sensitivity.confidence}">${f.sensitivity.confidence}</span>
+            <span class="flagged-item__confidence confidence--${f.sensitivity.confidence}">${CONFIDENCE_LABELS[f.sensitivity.confidence] || f.sensitivity.confidence}</span>
           </div>
         `).join('')}
       </div>`
@@ -757,6 +825,7 @@ function renderResultContent(container, apiResult, verdictResult, productId) {
     : '';
 
   container.innerHTML = `
+    ${backHtml}
     ${imageHtml}
     <div class="result-product-info">
       <h1 class="result-product-name">${escapeHtml(apiResult.name)}</h1>
@@ -770,13 +839,24 @@ function renderResultContent(container, apiResult, verdictResult, productId) {
     ${flaggedHtml}
     ${provenanceHtml}
     <div class="result-actions">
-      <button class="btn btn--primary btn--block" id="mark-safe-btn">mark as safe</button>
+      <button class="btn btn--primary btn--block" id="mark-safe-btn" ${persistedProduct && persistedProduct.markedSafe ? 'disabled' : ''}>${persistedProduct && persistedProduct.markedSafe ? '✓ marked safe' : 'mark as safe'}</button>
+      ${persistedProduct && persistedProduct.markedSafe ? `<button class="btn btn--ghost btn--block mt-2" id="unmark-safe-btn">remove from safe foods</button>` : ''}
       <button class="btn btn--ghost btn--block mt-2" id="scan-another-btn">scan another</button>
     </div>
     ${renderDebugPanel(apiResult, verdictResult)}
   `;
 
+  const backBtn = document.getElementById('result-back-btn');
+  if (backBtn) {
+    backBtn.addEventListener('click', () => {
+      const src = window.APP_STATE.resultSource;
+      if (src === 'screen-history') renderHistoryScreen();
+      else if (src === 'screen-safe') renderSafeFoodsScreen();
+    });
+  }
+
   document.getElementById('scan-another-btn').addEventListener('click', () => {
+    window.APP_STATE.resultSource = null;
     showScreen('screen-scan');
     startScanScreen();
   });
@@ -784,6 +864,9 @@ function renderResultContent(container, apiResult, verdictResult, productId) {
   document.getElementById('mark-safe-btn').addEventListener('click', () => {
     handleMarkSafe(productId, verdictResult);
   });
+
+  const unmarkBtn = document.getElementById('unmark-safe-btn');
+  if (unmarkBtn) wireUnmarkButton(unmarkBtn, productId);
 
   // Expandable ingredients
   const toggleBtn = container.querySelector('.provenance-toggle');
@@ -864,7 +947,7 @@ function renderProductNotFound(container, barcode) {
       <p class="not-found-state__copy">you can still check it by entering the ingredients yourself</p>
       <div class="not-found-actions">
         <button class="btn btn--primary" id="manual-entry-btn">type ingredients</button>
-        <button class="btn btn--outline" id="photo-label-btn">photograph label</button>
+        <button class="btn btn--outline" id="photo-label-btn">photo for reference</button>
       </div>
       <button class="btn btn--ghost btn--block mt-4" id="nf-scan-another">scan another</button>
     </div>
@@ -895,7 +978,7 @@ function showManualEntryModal(barcode, source) {
             📷 take a photo
           </label>
           <input type="file" id="label-photo-input" accept="image/*" capture="environment" style="display:none">
-          <p class="camera-hint__text">photograph the ingredients list, then copy them into the box below</p>
+          <p class="camera-hint__text">take a photo of the label to refer to, then type the ingredients into the box below</p>
           <img id="label-photo-preview" class="label-photo-preview" style="display:none" alt="Label photo">
         </div>
       ` : ''}
@@ -934,7 +1017,14 @@ function showManualEntryModal(barcode, source) {
     const productName = document.getElementById('manual-product-name').value.trim() || 'Unknown product';
 
     if (!rawText) {
-      document.getElementById('manual-ingredients-textarea').focus();
+      const ta = document.getElementById('manual-ingredients-textarea');
+      ta.focus();
+      ta.style.borderColor = 'var(--color-warning)';
+      const err = ta.parentElement.querySelector('.modal-field-error') || document.createElement('p');
+      err.className = 'modal-field-error';
+      err.style.cssText = 'color:var(--color-warning);font-size:var(--font-size-sm);margin-top:var(--space-1)';
+      err.textContent = 'please enter the ingredients list before analysing';
+      ta.after(err);
       return;
     }
 
@@ -953,12 +1043,27 @@ function showManualEntryModal(barcode, source) {
       source
     };
 
-    await showResultScreen(barcode, fakeApiResult);
+    await showResultScreen(barcode, fakeApiResult, false);
   });
 }
 
 async function handleMarkSafe(productId, verdictResult) {
   if (!productId) return;
+
+  async function doMark(override) {
+    await markProductSafe(productId, override, override ? 'user override' : '');
+    showToast('marked as safe');
+    const markBtn = document.getElementById('mark-safe-btn');
+    if (markBtn) { markBtn.textContent = '✓ marked safe'; markBtn.disabled = true; }
+    if (!document.getElementById('unmark-safe-btn') && markBtn) {
+      const unmarkBtn = document.createElement('button');
+      unmarkBtn.className = 'btn btn--ghost btn--block mt-2';
+      unmarkBtn.id = 'unmark-safe-btn';
+      unmarkBtn.textContent = 'remove from safe foods';
+      markBtn.after(unmarkBtn);
+      wireUnmarkButton(unmarkBtn, productId);
+    }
+  }
 
   if (verdictResult.flagged.length > 0) {
     const flaggedNames = verdictResult.flagged.map(f => f.sensitivity.displayName).join(', ');
@@ -966,18 +1071,10 @@ async function handleMarkSafe(productId, verdictResult) {
       `heads up — this product is flagged for ${flaggedNames}. our data might be outdated, or your relationship with this food may have changed. you know your body best.`,
       'mark safe anyway',
       'leave it for now',
-      async () => {
-        await markProductSafe(productId, true, 'user override');
-        showToast('marked as safe');
-        document.getElementById('mark-safe-btn').textContent = '✓ marked safe';
-        document.getElementById('mark-safe-btn').disabled = true;
-      }
+      () => doMark(true)
     );
   } else {
-    await markProductSafe(productId, false);
-    showToast('marked as safe');
-    document.getElementById('mark-safe-btn').textContent = '✓ marked safe';
-    document.getElementById('mark-safe-btn').disabled = true;
+    await doMark(false);
   }
 }
 
@@ -1012,6 +1109,9 @@ function renderDebugPanel(apiResult, verdictResult) {
 
 async function renderHistoryScreen() {
   showScreen('screen-history');
+  const screen = document.getElementById('screen-history');
+  const existingControls = screen.querySelector('.history-controls');
+  if (existingControls) existingControls.remove();
   const container = document.getElementById('history-list');
   container.innerHTML = '<p class="loading-text">loading…</p>';
 
@@ -1033,7 +1133,9 @@ async function renderHistoryScreen() {
   function getFiltered() {
     return history.filter(entry => {
       const matchesFilter = currentFilter === 'all' || entry.verdict === currentFilter;
-      const matchesSearch = !searchQuery || (entry.barcode || '').includes(searchQuery);
+      const matchesSearch = !searchQuery ||
+        (entry.barcode || '').includes(searchQuery) ||
+        (entry._resolvedName || '').toLowerCase().includes(searchQuery);
       return matchesFilter && matchesSearch;
     });
   }
@@ -1063,10 +1165,11 @@ async function renderHistoryScreen() {
         <span class="history-row__known">${entry.knownIngredientPercent || 0}% recognised</span>
       `;
 
-      // Load product name async
+      // Load product name async — also store on entry so search can match it
       if (entry.productId) {
         getProductById(entry.productId).then(product => {
           if (product) {
+            entry._resolvedName = product.name;
             row.querySelector('.history-row__barcode').textContent = product.name;
           }
         }).catch(() => {});
@@ -1075,6 +1178,7 @@ async function renderHistoryScreen() {
       row.addEventListener('click', async () => {
         const product = entry.productId ? await getProductById(entry.productId) : null;
         if (product) {
+          window.APP_STATE.resultSource = 'screen-history';
           await showResultScreen(product.barcode, {
             found: true,
             name: product.name,
@@ -1083,7 +1187,7 @@ async function renderHistoryScreen() {
             rawIngredientsText: product.rawIngredientsText,
             allergenTags: product.allergenTags,
             imageUrl: ''
-          });
+          }, true);
         }
       });
       row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') row.click(); });
@@ -1092,37 +1196,33 @@ async function renderHistoryScreen() {
     }
   }
 
-  // Inject search + filters above list
-  const screen = document.getElementById('screen-history');
-  let controlsEl = screen.querySelector('.history-controls');
-  if (!controlsEl) {
-    controlsEl = document.createElement('div');
-    controlsEl.className = 'history-controls';
-    controlsEl.innerHTML = `
-      <input type="search" class="text-input" id="history-search" placeholder="search by name or barcode…" aria-label="Search history">
-      <div class="filter-chips" role="group" aria-label="Filter by verdict">
-        <button class="filter-chip filter-chip--active" data-filter="all">all</button>
-        <button class="filter-chip" data-filter="safe">safe</button>
-        <button class="filter-chip" data-filter="caution">caution</button>
-        <button class="filter-chip" data-filter="warning">warning</button>
-      </div>
-    `;
-    screen.querySelector('.screen-header').after(controlsEl);
+  // Inject search + filters — always recreate to avoid stale closures on re-entry
+  const controlsEl = document.createElement('div');
+  controlsEl.className = 'history-controls';
+  controlsEl.innerHTML = `
+    <input type="search" class="text-input" id="history-search" placeholder="search by name or barcode…" aria-label="Search history">
+    <div class="filter-chips" role="group" aria-label="Filter by verdict">
+      <button class="filter-chip filter-chip--active" data-filter="all">all</button>
+      <button class="filter-chip" data-filter="safe">safe</button>
+      <button class="filter-chip" data-filter="caution">caution</button>
+      <button class="filter-chip" data-filter="warning">warning</button>
+    </div>
+  `;
+  screen.querySelector('.screen-header').after(controlsEl);
 
-    controlsEl.querySelectorAll('.filter-chip').forEach(chip => {
-      chip.addEventListener('click', () => {
-        controlsEl.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('filter-chip--active'));
-        chip.classList.add('filter-chip--active');
-        currentFilter = chip.dataset.filter;
-        render();
-      });
-    });
-
-    document.getElementById('history-search').addEventListener('input', e => {
-      searchQuery = e.target.value.trim().toLowerCase();
+  controlsEl.querySelectorAll('.filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      controlsEl.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('filter-chip--active'));
+      chip.classList.add('filter-chip--active');
+      currentFilter = chip.dataset.filter;
       render();
     });
-  }
+  });
+
+  document.getElementById('history-search').addEventListener('input', e => {
+    searchQuery = e.target.value.trim().toLowerCase();
+    render();
+  });
 
   render();
 }
@@ -1159,11 +1259,12 @@ async function renderSafeFoodsScreen() {
         <span class="safe-row__brand">${escapeHtml(product.brand || '')}</span>
       </div>
       <div class="safe-row__meta">
-        <span class="safe-row__ingredients">${product.ingredients ? product.ingredients.length : 0} ingredients</span>
+        ${product.userOverride ? `<span class="safe-row__override">⚠ trusted anyway</span>` : ''}
         <span class="safe-row__date">${humanDate(product.markedSafeAt)}</span>
       </div>
     `;
     row.addEventListener('click', async () => {
+      window.APP_STATE.resultSource = 'screen-safe';
       await showResultScreen(product.barcode, {
         found: true,
         name: product.name,
@@ -1172,7 +1273,7 @@ async function renderSafeFoodsScreen() {
         rawIngredientsText: product.rawIngredientsText,
         allergenTags: product.allergenTags,
         imageUrl: ''
-      });
+      }, true);
     });
     row.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') row.click(); });
     container.appendChild(row);
@@ -1192,7 +1293,7 @@ async function renderSettingsScreen() {
           <span class="settings-sensitivity__emoji">${escapeHtml(a.emoji || '')}</span>
           <div class="settings-sensitivity__info">
             <span class="settings-sensitivity__name">${escapeHtml(a.displayName)}</span>
-            <span class="settings-sensitivity__confidence confidence--${a.confidence}">${a.confidence}</span>
+            <span class="settings-sensitivity__confidence confidence--${a.confidence}">${CONFIDENCE_LABELS[a.confidence] || a.confidence}</span>
           </div>
           <div class="settings-sensitivity__actions">
             <button class="btn btn--text settings-edit-btn" aria-label="Edit ${escapeHtml(a.displayName)}">edit</button>

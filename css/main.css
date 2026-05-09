@@ -1,16 +1,25 @@
 /* ── Custom properties ────────────────────────────────────────────────── */
 :root {
-  --color-bg: #FAFAF8;
-  --color-surface: #FFFFFF;
-  --color-text-primary: #1A1A1A;
-  --color-text-secondary: #6B6B6B;
-  --color-accent: #4A7C59;
-  --color-accent-light: #EAF2EC;
-  --color-safe: #4A7C59;
-  --color-caution: #C97B2A;
-  --color-warning: #B84C4C;
-  --color-border: #E8E8E4;
-  --color-surface-raised: #F5F5F2;
+  /* gav.fi dark brand */
+  --color-bg:             #07091a;
+  --color-surface:        #111523;
+  --color-surface-raised: #1a1e35;
+  --color-indigo:         #222034;
+
+  --color-text-primary:   #ffffff;
+  --color-text-secondary: #cbdbfc;
+
+  --color-accent:         #ffce10;
+  --color-accent-bright:  #fbf236;
+  --color-accent-light:   rgba(255,206,16,.12);
+  --color-accent-glow:    rgba(255,206,16,.25);
+
+  --color-border:         rgba(255,206,16,.15);
+  --color-border-solid:   #463e30;
+
+  --color-safe:    #2ecc71;
+  --color-caution: #f0a500;
+  --color-warning: #e74c3c;
 
   --font-size-xs: 12px;
   --font-size-sm: 14px;
@@ -57,7 +66,7 @@ html, body {
 }
 
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-family: 'Montserrat', system-ui, -apple-system, sans-serif;
   font-size: var(--font-size-base);
   line-height: 1.5;
   color: var(--color-text-primary);
@@ -551,7 +560,7 @@ a {
   left: calc(50% - min(35vw, 130px) + 8px);
   right: calc(50% - min(35vw, 130px) + 8px);
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(74,124,89,0.8), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,206,16,0.8), transparent);
   animation: scan-line 2s ease-in-out infinite;
   top: 50%;
 }
@@ -597,7 +606,7 @@ a {
 }
 
 .torch-btn--active {
-  background: rgba(74,124,89,0.8);
+  background: rgba(255,206,16,0.85);
 }
 
 .manual-entry-section {
@@ -990,7 +999,7 @@ a {
 
 .filter-chip--active {
   background: var(--color-accent);
-  color: white;
+  color: var(--color-indigo);
   border-color: var(--color-accent);
 }
 
@@ -1203,7 +1212,7 @@ a {
 .toggle-btn--on {
   border-color: var(--color-accent);
   background: var(--color-accent);
-  color: white;
+  color: var(--color-indigo);
 }
 
 /* ── Buttons ─────────────────────────────────────────────────────────────── */
@@ -1230,13 +1239,14 @@ a {
 
 .btn--primary {
   background: var(--color-accent);
-  color: white;
+  color: var(--color-indigo);
   border-color: var(--color-accent);
+  font-weight: 800;
 }
 
 .btn--primary:hover:not(:disabled) {
-  background: #3a6447;
-  border-color: #3a6447;
+  background: var(--color-accent-bright);
+  border-color: var(--color-accent-bright);
 }
 
 .btn--outline {
@@ -1453,7 +1463,7 @@ a {
 .loading-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(250,250,248,0.9);
+  background: rgba(7,9,26,0.92);
   z-index: 300;
   display: flex;
   flex-direction: column;
@@ -1508,7 +1518,7 @@ a {
 }
 
 .debug-panel {
-  background: #1a1a1a;
+  background: #0a0c1a;
   border-radius: var(--radius-sm);
   padding: var(--space-4);
   margin-top: var(--space-3);
@@ -1537,8 +1547,8 @@ a {
   bottom: calc(var(--nav-height) + var(--space-4));
   left: 50%;
   transform: translateX(-50%) translateY(20px);
-  background: var(--color-text-primary);
-  color: white;
+  background: var(--color-accent);
+  color: var(--color-indigo);
   padding: var(--space-3) var(--space-5);
   border-radius: var(--radius-pill);
   font-size: var(--font-size-sm);
@@ -1615,6 +1625,20 @@ a {
 .mt-4 { margin-top: var(--space-4); }
 .mt-5 { margin-top: var(--space-5); }
 .mt-6 { margin-top: var(--space-6); }
+
+/* ── Result back button ──────────────────────────────────────────────────── */
+.result-back-btn {
+  display: block;
+  padding: var(--space-4) var(--space-5) 0;
+  text-align: left;
+}
+
+/* ── Safe foods override indicator ──────────────────────────────────────── */
+.safe-row__override {
+  font-size: var(--font-size-xs);
+  color: var(--color-caution);
+  font-weight: 600;
+}
 
 /* ── Animations ──────────────────────────────────────────────────────────── */
 @keyframes fadeIn {
